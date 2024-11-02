@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.bg-gray-800 {
+  background-color: #252525;
+}
+
+.text-white {
+  color: #ffffff;
+}
+@media (max-width: 640px) {
+  .w-64 {
+    display: none;
+  }
+}
