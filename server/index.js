@@ -1,4 +1,7 @@
 const app = require("./src/app");
+const cors = require("cors");
+
+app.use(cors());
 
 const MongodbService = require("./src/Services/mongodbService");
 
@@ -9,6 +12,6 @@ let connectionString = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.
 const database = new MongodbService(connectionString);
 database.connect();
 
-app.listen(process.env.PORT, () => {
+app.listen(process.env.PORT || 3000, () => {
   console.log(`Server is running on port ${process.env.PORT}`);
 });
