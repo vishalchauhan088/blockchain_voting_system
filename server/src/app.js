@@ -8,7 +8,7 @@ const cors = require("cors");
 app.use(cors());
 
 const electionRoutes = require("./routes/election");
-const userActivityRoutes = require("./routes/userActivity");
+const votingActivityRoutes = require("./routes/votingActivity");
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
@@ -20,6 +20,9 @@ app.get("/", (req, res, next) => {
 });
 app.use("/api/v1/auth", auth);
 app.use("/api/v1/election", electionRoutes);
-app.use("/api/v1/userActivity", userActivityRoutes);
+app.use("/api/v1/useractivity", votingActivityRoutes);
+app.use("*", (req, res, next) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
 module.exports = app;

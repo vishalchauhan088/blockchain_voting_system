@@ -11,10 +11,10 @@ const votingActivitySchema = new mongoose.Schema({
     ref: "Election",
     required: true,
   },
-  candidateId: {
-    type: Number, // Index or ID of the candidate in the election contract
-    required: true,
-  },
+  // candidateId: {
+  //   type: , // Index or ID of the candidate in the election contract
+  //   //required: true,
+  // },
   transactionHash: {
     type: String,
     //required: true, // The transaction hash for blockchain tracking

@@ -2,11 +2,12 @@ const express = require("express");
 const VotingActivity = require("../model/votingActivityModel");
 const { authMiddleware } = require("../controllers/authControllers");
 const router = express.Router();
+const mongoose = require("mongoose");
 
 // Voting Route
 router.post("/:electionId/vote", authMiddleware, async (req, res) => {
   let { electionId } = req.params;
-  electionId = mongoose.Types.ObjectId(electionId);
+  electionId = new mongoose.Types.ObjectId(electionId);
   const { candidateId, transactionHash } = req.body; // Expect transaction hash from frontend
 
   try {
