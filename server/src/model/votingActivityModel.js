@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const VotingSystem = require("../../../voting_system/ignition/modules/VotingSystem");
 
 const votingActivitySchema = new mongoose.Schema({
   user: {

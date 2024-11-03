@@ -1,7 +1,4 @@
 const app = require("./src/app");
-const cors = require("cors");
-
-app.use(cors());
 
 const MongodbService = require("./src/Services/mongodbService");
 

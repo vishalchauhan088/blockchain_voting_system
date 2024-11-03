@@ -4,6 +4,9 @@ const app = express();
 const auth = require("./routes/auth");
 app.use(express.json());
 
+const cors = require("cors");
+app.use(cors());
+
 const electionRoutes = require("./routes/election");
 const userActivityRoutes = require("./routes/userActivity");
 
