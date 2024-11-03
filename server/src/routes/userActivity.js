@@ -5,7 +5,8 @@ const router = express.Router();
 
 // Voting Route
 router.post("/:electionId/vote", authMiddleware, async (req, res) => {
-  const { electionId } = req.params;
+  let { electionId } = req.params;
+  electionId = mongoose.Types.ObjectId(electionId);
   const { candidateId, transactionHash } = req.body; // Expect transaction hash from frontend
 
   try {
@@ -52,12 +53,10 @@ router.get("/my-votes", authMiddleware, async (req, res) => {
     res.status(200).json(electionsVoted);
   } catch (error) {
     console.error("Error fetching user's voted elections:", error);
-    res
-      .status(500)
-      .json({
-        message: "Failed to fetch elections where user has voted",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to fetch elections where user has voted",
+      error: error.message,
+    });
   }
 });
 

@@ -124,7 +124,7 @@ router.post(
   authMiddleware,
   isElectionAdminMiddleware,
   async (req, res) => {
-    const { name, walletAddress, candidateIndex, symbol } = req.body;
+    const { name, walletAddress, contractIndex, symbol } = req.body;
     const { electionId } = req.params;
 
     try {
@@ -138,7 +138,7 @@ router.post(
       const newCandidate = {
         name,
         symbol,
-        contractIndex: candidateIndex,
+        contractIndex,
         walletAddress,
       };
 
@@ -146,11 +146,12 @@ router.post(
       election.candidates.push(newCandidate);
 
       // Save the updated election document
-      await election.save();
+      const newElection = await election.save();
 
       res.status(201).json({
         message: "Candidate added successfully",
         candidate: newCandidate,
+        election: newElection,
       });
     } catch (error) {
       console.error("Error adding candidate:", error);

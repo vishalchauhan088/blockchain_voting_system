@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -13,15 +13,31 @@ import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Sidebar from "./components/sideNavBar/SideNavBar";
+import ConnectWalletButton from "./components/connectWalletButton";
+import { useSelector } from "react-redux";
+import { logout } from "./store/slices/userSlice";
+import { useDispatch } from "react-redux";
+import useContract from "./hooks/useContract";
 
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Track login state
+  //const [isLoggedIn, setIsLoggedIn] = useState(false); // Track login state
+  const isLoggedIn = useSelector((state) => state.user?.token != null);
+  const user = useSelector((state) => state.user); // This gets the entire user slice
+  const { userInfo } = user; // Destructure to get userInfo
+  console.log("user in app component:", user);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Track sidebar visibility
   const [profileNav, setProfileNav] = useState(false);
 
+  const walletAddress = useSelector((state) => state.wallet.address);
+  const isConnected = useSelector((state) => state.wallet.isConnected);
+  const dispatch = useDispatch();
+  const contract = useContract();
+
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    //setIsLoggedIn(false);
     // Add logout logic here (clear tokens, session, etc.)
+    dispatch(logout());
+    console.log("Logging out...");
   };
 
   return (
@@ -64,11 +80,20 @@ const App = () => {
           <Link to="/contact" className="hover:text-gray-400">
             Contact Us
           </Link> */}
+          {!isConnected ? (
+            <>
+              <ConnectWalletButton />
+            </>
+          ) : (
+            <>
+              <h4>{walletAddress}</h4>
+            </>
+          )}
 
           {!isLoggedIn ? (
             <>
               <Link to="/login" className="hover:text-gray-400">
-                Login
+                login
               </Link>
               <Link to="/signup" className="hover:text-gray-400">
                 Signup
@@ -80,7 +105,7 @@ const App = () => {
                 className="hover:text-gray-400"
                 onClick={() => setProfileNav(!profileNav)}
               >
-                User Profile
+                {userInfo?.username}
               </button>
               {/* Dropdown for Profile */}
               <div
@@ -121,10 +146,7 @@ const App = () => {
               path="/profile"
               element={isLoggedIn ? <Profile /> : <Navigate to="/login" />}
             />
-            <Route
-              path="/login"
-              element={<Login setIsLoggedIn={setIsLoggedIn} />}
-            />
+            <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
           </Routes>
         </main>

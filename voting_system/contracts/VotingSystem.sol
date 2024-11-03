@@ -1,241 +1,147 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity >=0.7.0 <0.9.0;
 
 contract VotingSystem {
-    enum ElectionStatus {
-        Registration,
-        Voting,
-        Ended
-    }
-
     struct Candidate {
         string name;
-        address candidateAddress;
-        uint256 voteCount; // Track number of votes
-        bool isRegistered;
+        string symbol;
+        uint voteCount;
     }
 
     struct Election {
-        string name;
-        address[] admins; // Admins specific to this election
-        ElectionStatus status;
-        mapping(address => bool) registeredVoters; // Track registered voters
-        mapping(address => bool) voted; // Track if a voter has voted
-        mapping(address => Candidate) candidates; // Track candidates
-        address[] candidateList; // List of candidate addresses
+        string title;
+        address creator;
+        bool isVotingOpen;
+        uint[] candidateIds; // Array of candidate IDs for this election
+        mapping(address => bool) hasVoted; // Track if an address has voted in this election
+        mapping(uint => Candidate) candidates; // Mapping of candidate ID to Candidate details
+        uint candidateCount; // Candidate count specific to this election
     }
 
-    mapping(uint256 => Election) public elections;
-    uint256 public electionCount;
+    mapping(uint => Election) public elections;
+    uint public electionCount; // 0-based index for elections
 
-    // Events for tracking important actions
-    event VoterRegistered(uint256 indexed electionId, address indexed voter);
-    event CandidateRegistered(
-        uint256 indexed electionId,
-        address indexed candidate
+    event ElectionCreated(uint electionId, string title, address creator);
+    event CandidateAdded(
+        uint electionId,
+        uint candidateId,
+        string name,
+        string symbol
     );
-    event CandidateRemoved(
-        uint256 indexed electionId,
-        address indexed candidate
-    );
-    event Voted(
-        uint256 indexed electionId,
-        address indexed voter,
-        address indexed candidate
-    );
-    event ElectionStatusChanged(
-        uint256 indexed electionId,
-        ElectionStatus status
-    );
+    event VoteCast(uint electionId, address voter, uint candidateId);
+    event VotingClosed(uint electionId);
 
-    modifier onlyAdmin(uint256 electionId) {
+    // Create a new election
+    function createElection(string memory _title) public returns (uint) {
+        elections[electionCount].title = _title;
+        elections[electionCount].creator = msg.sender;
+        elections[electionCount].isVotingOpen = true; // Voting is open upon creation
+
+        emit ElectionCreated(electionCount, _title, msg.sender);
+        electionCount++; // Increment for next election ID
+        return electionCount - 1; // Return the ID of the current election (0-based)
+    }
+
+    // Add a candidate to an election
+    function addCandidate(
+        uint electionId,
+        string memory _name,
+        string memory _symbol
+    ) public returns (uint) {
+        Election storage election = elections[electionId];
         require(
-            isElectionAdmin(electionId, msg.sender),
-            "Only admin can perform this action."
-        );
-        _;
-    }
-
-    modifier onlyDuringVoting(uint256 electionId) {
-        require(
-            elections[electionId].status == ElectionStatus.Voting,
-            "Not in voting phase."
-        );
-        _;
-    }
-
-    modifier onlyDuringRegistration(uint256 electionId) {
-        require(
-            elections[electionId].status == ElectionStatus.Registration,
-            "Not in registration phase."
-        );
-        _;
-    }
-
-    constructor() {}
-
-    function createElection(string memory name) public {
-        Election storage newElection = elections[electionCount];
-        newElection.name = name;
-        newElection.admins.push(msg.sender); // Add creator as the first admin
-        newElection.status = ElectionStatus.Registration;
-        electionCount++;
-    }
-
-    function addAdmin(
-        uint256 electionId,
-        address newAdmin
-    ) public onlyAdmin(electionId) {
-        elections[electionId].admins.push(newAdmin);
-    }
-
-    function openRegistration(uint256 electionId) public onlyAdmin(electionId) {
-        elections[electionId].status = ElectionStatus.Registration;
-        emit ElectionStatusChanged(electionId, ElectionStatus.Registration);
-    }
-
-    function closeRegistration(
-        uint256 electionId
-    ) public onlyAdmin(electionId) {
-        elections[electionId].status = ElectionStatus.Voting;
-        emit ElectionStatusChanged(electionId, ElectionStatus.Voting);
-    }
-
-    function endVoting(uint256 electionId) public onlyAdmin(electionId) {
-        elections[electionId].status = ElectionStatus.Ended;
-        emit ElectionStatusChanged(electionId, ElectionStatus.Ended);
-    }
-
-    function registerVoter(
-        uint256 electionId,
-        address voter
-    ) public onlyAdmin(electionId) onlyDuringRegistration(electionId) {
-        require(
-            !elections[electionId].registeredVoters[voter],
-            "Voter is already registered."
-        );
-        elections[electionId].registeredVoters[voter] = true;
-        emit VoterRegistered(electionId, voter);
-    }
-
-    function registerCandidate(
-        uint256 electionId,
-        string memory candidateName
-    ) public onlyDuringRegistration(electionId) {
-        require(
-            !elections[electionId].candidates[msg.sender].isRegistered,
-            "Candidate is already registered."
+            election.creator == msg.sender,
+            "Only the election creator can add candidates."
         );
 
-        elections[electionId].candidates[msg.sender] = Candidate({
-            name: candidateName,
-            candidateAddress: msg.sender,
-            voteCount: 0,
-            isRegistered: true
-        });
+        // Use the election's candidateCount as the ID
+        election.candidates[election.candidateCount] = Candidate(
+            _name,
+            _symbol,
+            0
+        );
+        election.candidateIds.push(election.candidateCount); // Add candidate ID to election's candidate list
 
-        elections[electionId].candidateList.push(msg.sender);
-        emit CandidateRegistered(electionId, msg.sender);
+        emit CandidateAdded(
+            electionId,
+            election.candidateCount,
+            _name,
+            _symbol
+        );
+        election.candidateCount++; // Increment the election's candidate count
+        return election.candidateCount - 1; // Return the ID of the current candidate (0-based)
     }
 
-    function removeCandidate(
-        uint256 electionId,
-        address candidateAddress
-    ) public onlyAdmin(electionId) onlyDuringRegistration(electionId) {
+    // Cast a vote for a candidate in an open election
+    function castVote(uint electionId, uint candidateId) public {
+        Election storage election = elections[electionId];
+        require(election.isVotingOpen, "Voting is closed for this election.");
         require(
-            elections[electionId].candidates[candidateAddress].isRegistered,
-            "Candidate is not registered."
-        );
+            !election.hasVoted[msg.sender],
+            "You have already voted in this election."
+        ); // Check if the sender has already voted
 
-        elections[electionId].candidates[candidateAddress].isRegistered = false;
-        emit CandidateRemoved(electionId, candidateAddress);
+        election.candidates[candidateId].voteCount++;
+        election.hasVoted[msg.sender] = true; // Mark the sender as having voted
+        emit VoteCast(electionId, msg.sender, candidateId);
     }
 
-    function vote(
-        uint256 electionId,
-        address candidateAddress
-    ) public onlyDuringVoting(electionId) {
+    // Close voting for an election (only creator can close it)
+    function closeVoting(uint electionId) public {
         require(
-            elections[electionId].registeredVoters[msg.sender],
-            "You are not registered to vote."
+            elections[electionId].creator == msg.sender,
+            "Only the election creator can close voting."
         );
-        require(
-            !elections[electionId].voted[msg.sender],
-            "You have already voted."
-        );
-        require(
-            elections[electionId].candidates[candidateAddress].isRegistered,
-            "Candidate is not registered."
-        );
-
-        elections[electionId].voted[msg.sender] = true; // Mark as voted
-        elections[electionId].candidates[candidateAddress].voteCount++; // Increment vote count for the candidate
-        emit Voted(electionId, msg.sender, candidateAddress);
+        elections[electionId].isVotingOpen = false;
+        emit VotingClosed(electionId);
     }
 
+    // Get the results of an election
+    function getResults(
+        uint electionId
+    ) public view returns (Candidate[] memory) {
+        Election storage election = elections[electionId];
+        Candidate[] memory candidates = new Candidate[](
+            election.candidateIds.length
+        );
+
+        for (uint i = 0; i < election.candidateIds.length; i++) {
+            uint candidateId = election.candidateIds[i];
+            candidates[i] = election.candidates[candidateId];
+        }
+        return candidates;
+    }
+
+    // Get all details of an election
     function getElectionDetails(
-        uint256 electionId
+        uint electionId
     )
         public
         view
         returns (
-            string memory name,
-            ElectionStatus status,
-            address[] memory admins
+            string memory title,
+            address creator,
+            bool isVotingOpen,
+            Candidate[] memory candidates
         )
     {
         Election storage election = elections[electionId];
-        return (election.name, election.status, election.admins);
-    }
+        title = election.title;
+        creator = election.creator;
+        isVotingOpen = election.isVotingOpen;
 
-    function getCandidateList(
-        uint256 electionId
-    ) public view returns (address[] memory) {
-        return elections[electionId].candidateList;
-    }
-
-    function getCandidateVoteCount(
-        uint256 electionId,
-        address candidateAddress
-    ) public view returns (uint256) {
-        require(
-            elections[electionId].candidates[candidateAddress].isRegistered,
-            "Candidate is not registered."
-        );
-        return elections[electionId].candidates[candidateAddress].voteCount;
-    }
-
-    function getFinalResults(
-        uint256 electionId
-    ) public view returns (Candidate[] memory) {
-        require(
-            elections[electionId].status == ElectionStatus.Ended,
-            "Election has not ended yet."
-        );
-
-        Candidate[] memory results = new Candidate[](
-            elections[electionId].candidateList.length
-        );
-        for (
-            uint256 i = 0;
-            i < elections[electionId].candidateList.length;
-            i++
-        ) {
-            address candidateAddress = elections[electionId].candidateList[i];
-            results[i] = elections[electionId].candidates[candidateAddress];
+        candidates = new Candidate[](election.candidateIds.length);
+        for (uint i = 0; i < election.candidateIds.length; i++) {
+            uint candidateId = election.candidateIds[i];
+            candidates[i] = election.candidates[candidateId];
         }
-        return results;
     }
 
-    function isElectionAdmin(
-        uint256 electionId,
-        address admin
+    // Getter function for hasVoted mapping
+    function hasVotedInElection(
+        uint electionId,
+        address voter
     ) public view returns (bool) {
-        for (uint256 i = 0; i < elections[electionId].admins.length; i++) {
-            if (elections[electionId].admins[i] == admin) {
-                return true;
-            }
-        }
-        return false;
+        return elections[electionId].hasVoted[voter];
     }
 }

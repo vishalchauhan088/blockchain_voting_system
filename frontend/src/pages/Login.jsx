@@ -1,20 +1,51 @@
 // pages/Login.js
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom"; // Import Link
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import axios from "axios";
+import { setLoading, setUser, setError } from "../store/slices/userSlice";
 
-const Login = ({ setIsLoggedIn }) => {
+const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoadingState] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Replace with your actual login logic
-    if (username === "user" && password === "password") {
-      setIsLoggedIn(true);
-      navigate("/profile"); // Redirect to profile after login
-    } else {
-      alert("Invalid credentials");
+    dispatch(setLoading(true));
+    setErrorMessage("");
+    setLoadingState(true);
+
+    // Client-side validation
+    if (!username || !password) {
+      setErrorMessage("Username and password are required.");
+      dispatch(setLoading(false));
+      return;
+    }
+
+    try {
+      const response = await axios.post(`api/v1/auth/login`, {
+        username,
+        password,
+      });
+
+      // Dispatch the user info and token to the store
+      const action = dispatch(setUser(response.data));
+      console.log("action:", action);
+
+      localStorage.setItem("userInfo", JSON.stringify(response.data.user));
+      localStorage.setItem("token", JSON.stringify(response.data.token));
+
+      navigate("/"); // Redirect to home or another page after login
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Login failed";
+      dispatch(setError(errorMessage));
+      setErrorMessage(errorMessage);
+    } finally {
+      dispatch(setLoading(false));
     }
   };
 
@@ -33,6 +64,15 @@ const Login = ({ setIsLoggedIn }) => {
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form className="space-y-6" onSubmit={handleLogin}>
+          {errorMessage && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="text-red-500 text-center mb-4"
+            >
+              {errorMessage}
+            </div>
+          )}
           <div>
             <label
               htmlFor="username"
@@ -49,6 +89,7 @@ const Login = ({ setIsLoggedIn }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Enter your username"
               />
             </div>
           </div>
@@ -79,6 +120,7 @@ const Login = ({ setIsLoggedIn }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Enter your password"
               />
             </div>
           </div>
@@ -86,16 +128,16 @@ const Login = ({ setIsLoggedIn }) => {
           <div>
             <button
               type="submit"
+              disabled={loading}
               className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </form>
 
         <p className="mt-10 text-center text-sm text-gray-500">
-          Not a member?
-          {/* Use Link component for navigation to the signup page */}
+          Not a member?{" "}
           <Link
             to="/signup"
             className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
