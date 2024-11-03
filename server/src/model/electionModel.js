@@ -41,7 +41,10 @@ const electionSchema = new mongoose.Schema({
     type: Number,
     required: true, // Index of the election on the contract
   },
-  isVotingOpen: Boolean,
+  isVotingOpen: {
+    type: Boolean,
+    default: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

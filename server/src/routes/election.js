@@ -6,6 +6,7 @@ const {
   authMiddleware,
   isElectionAdminMiddleware,
 } = require("../controllers/authControllers");
+const { default: mongoose } = require("mongoose");
 
 // Create an Election
 router.post("/", authMiddleware, async (req, res) => {
@@ -117,6 +118,39 @@ router.delete(
     }
   }
 );
+
+// Close election endpoint
+router.put("/close-election/:id", async (req, res) => {
+  const electionId = new mongoose.Types.ObjectId(req.params.id);
+
+  try {
+    // Find the election by ID and check if it exists
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    // Check if the election is already closed
+    if (!election.isVotingOpen) {
+      return res.status(400).json({ message: "Election is already closed" });
+    }
+
+    // Update the election to close voting
+    election.isVotingOpen = false;
+    election.updatedAt = Date.now();
+
+    // Save the updated election
+    await election.save();
+
+    return res
+      .status(200)
+      .json({ message: "Election closed successfully", election });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Error closing the election", error });
+  }
+});
 
 // Add Candidate to Election - Only creator (admin) can add
 router.post(

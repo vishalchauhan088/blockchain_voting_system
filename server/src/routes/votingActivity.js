@@ -44,6 +44,7 @@ router.get("/my-votes", authMiddleware, async (req, res) => {
     // Map to get just the elections details
     const electionsVoted = votingActivities.map((voting) => ({
       electionId: voting.election._id,
+      electionIndex: voting.election.electionIndex,
       title: voting.election.title,
       description: voting.election.description,
       timestamp: voting.timestamp,
