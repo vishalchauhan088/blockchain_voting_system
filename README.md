@@ -56,7 +56,7 @@ Before you begin, ensure you have met the following requirements:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/nex_vote.git
+   git clone https://github.com/vishalchauhan088/nex_vote.git
    ```
 
 2. Navigate to the project directory:
@@ -91,7 +91,7 @@ Before you begin, ensure you have met the following requirements:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/nex-vote-backend.git
+   git clone https://github.com/vishalchauhan088/nex-vote-backend.git
    ```
 
 2. Navigate to the project directory:
